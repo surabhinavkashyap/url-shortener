@@ -9,8 +9,21 @@ function isHttpUrl(value) {
   }
 }
 
+function getBaseUrl() {
+  if (process.env.BASE_URL) {
+    return process.env.BASE_URL.replace(/\/$/, '');
+  }
+  if (process.env.VERCEL_ENV === 'production' && process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return 'http://localhost:3001';
+}
+
 function toResponse(url) {
-  const baseUrl = (process.env.BASE_URL || 'http://localhost:3001').replace(/\/$/, '');
+  const baseUrl = getBaseUrl();
   return {
     id: String(url._id),
     originalUrl: url.originalUrl,

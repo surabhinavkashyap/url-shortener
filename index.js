@@ -18,19 +18,27 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.get('/health', (req, res) => {
   res.status(200).json({ message: 'Server is running' });
 });
 
 app.use('/api/urls', urlsRouter);
 
-// Serve the built React frontend (client/dist) when it exists.
-// Static files are mounted before the /:code redirect so "/" and
-// "/assets/*" are handled here and never treated as short codes.
+// Local/dev: serve the Vite build from client/dist.
+// On Vercel, static files come from /public (CDN) and express.static is ignored.
 const clientDist = path.join(__dirname, 'client', 'dist');
-if (fs.existsSync(clientDist)) {
+if (!process.env.VERCEL && fs.existsSync(clientDist)) {
   app.use(express.static(clientDist));
-} else {
+} else if (!process.env.VERCEL) {
   app.get('/', (req, res) => {
     res.status(200).json({
       message: 'URL shortener API',
@@ -51,16 +59,23 @@ app.use((err, req, res, next) => {
     return res.status(400).json({ error: 'Invalid JSON body' });
   }
   console.error(err);
-  res.status(500).json({ error: 'Server error' });
+  const message = err.message === 'MONGODB_URI is not set'
+    ? 'Database is not configured'
+    : 'Server error';
+  res.status(500).json({ error: message });
 });
 
-connectDB()
-  .then(() => {
-    app.listen(port, () => {
-      console.log(`Server is running on port ${port}`);
+module.exports = app;
+
+if (require.main === module) {
+  connectDB()
+    .then(() => {
+      app.listen(port, () => {
+        console.log(`Server is running on port ${port}`);
+      });
+    })
+    .catch((err) => {
+      console.error(err);
+      process.exit(1);
     });
-  })
-  .catch((err) => {
-    console.log(err);
-    process.exit(1);
-  });
+}

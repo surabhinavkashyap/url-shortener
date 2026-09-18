@@ -4,5 +4,7 @@ node_modules/
 !.env.example
 client/node_modules/
 client/dist/
+public/
+.vercel
 .DS_Store
 *.log
